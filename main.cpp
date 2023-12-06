@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <algorithm>
 
@@ -7,7 +8,12 @@ public:
     std::string description;
     bool completed;
 
-    Task(const std::string& desc) : description(desc), completed(false) {}
+    Task(const std::string& desc, bool comp = false) : description(desc), completed(comp) {}
+
+    // Convert task to a string for storage in a file
+    std::string toString() const {
+        return description + "," + (completed ? "1" : "0");
+    }
 };
 
 class User {
@@ -21,7 +27,7 @@ public:
         tasks.emplace_back(desc);
     }
 
-    void viewTasks() {
+    void viewTasks() const {
         std::cout << "Tasks for user " << username << ":\n";
         for (const auto& task : tasks) {
             std::cout << "- " << task.description << (task.completed ? " (Completed)" : "") << "\n";
@@ -40,10 +46,49 @@ public:
             std::cout << "Task not found.\n";
         }
     }
+
+    // Save user's tasks to a file
+    void saveTasksToFile(const std::string& filename) const {
+        std::ofstream file(filename);
+
+        if (file.is_open()) {
+            for (const auto& task : tasks) {
+                file << task.toString() << "\n";
+            }
+            std::cout << "Tasks saved to file.\n";
+        } else {
+            std::cerr << "Unable to open file for writing.\n";
+        }
+    }
+
+    // Load user's tasks from a file
+    void loadTasksFromFile(const std::string& filename) {
+        std::ifstream file(filename);
+
+        if (file.is_open()) {
+            tasks.clear(); // Clear existing tasks
+            std::string line;
+            while (std::getline(file, line)) {
+                // Split the line into description and completion status
+                size_t commaPos = line.find(',');
+                if (commaPos != std::string::npos && commaPos < line.length() - 1) {
+                    std::string desc = line.substr(0, commaPos);
+                    bool comp = line.substr(commaPos + 1) == "1";
+                    tasks.emplace_back(desc, comp);
+                }
+            }
+            std::cout << "Tasks loaded from file.\n";
+        } else {
+            std::cerr << "Unable to open file for reading.\n";
+        }
+    }
 };
 
 int main() {
     User currentUser("John Doe");
+
+    // Load tasks from a file
+    currentUser.loadTasksFromFile("tasks.txt");
 
     // Menu-driven interface
     int choice;
@@ -52,7 +97,8 @@ int main() {
         std::cout << "1. Add Task\n";
         std::cout << "2. View Tasks\n";
         std::cout << "3. Complete Task\n";
-        std::cout << "4. Exit\n";
+        std::cout << "4. Save Tasks\n";
+        std::cout << "5. Exit\n";
         std::cout << "Enter your choice: ";
         std::cin >> choice;
 
@@ -77,12 +123,16 @@ int main() {
             break;
         }
         case 4:
+            // Save tasks to a file
+            currentUser.saveTasksToFile("tasks.txt");
+            break;
+        case 5:
             std::cout << "Exiting Task Master. Goodbye!\n";
             break;
         default:
             std::cout << "Invalid choice. Please try again.\n";
         }
-    } while (choice != 4);
+    } while (choice != 5);
 
     return 0;
 }
